@@ -1,11 +1,11 @@
 import { pool } from '../config/db.js';
 import type { NearbyStationQuery } from '../types/domain.js';
 
-export async function findNearbyStations(query: NearbyStationQuery) {
-  // Debug log to verify database count
-  const countRes = await pool.query('SELECT COUNT(*) FROM stations');
-  console.log('Total stations in database:', countRes.rows[0].count);
-
+export async function getNearbyChargers(
+  latitude: number,
+  longitude: number,
+  radiusInMeters: number
+) {
   const result = await pool.query(
     `SELECT id, name, address,
             ST_Y(location::geometry) AS latitude,
@@ -21,8 +21,16 @@ export async function findNearbyStations(query: NearbyStationQuery) {
          $3
        )
      ORDER BY distance_meters ASC`,
-    [query.latitude, query.longitude, query.radiusMeters]
+    [latitude, longitude, radiusInMeters]
   );
 
   return result.rows;
+}
+
+export async function findNearbyStations(query: NearbyStationQuery) {
+  // Debug log to verify database count
+  const countRes = await pool.query('SELECT COUNT(*) FROM stations');
+  console.log('Total stations in database:', countRes.rows[0].count);
+
+  return getNearbyChargers(query.latitude, query.longitude, query.radiusMeters);
 }

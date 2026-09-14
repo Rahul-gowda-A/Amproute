@@ -1,9 +1,7 @@
-import 'dotenv/config';
-import { Redis } from 'ioredis';
+import { Redis } from '@upstash/redis';
+import { config } from './env.js';
 
-const redisUrl = process.env.REDIS_URL;
-if (!redisUrl) {
-  throw new Error('REDIS_URL is required');
-}
-
-export const redis = new Redis(redisUrl);
+export const redis = new Redis({
+  url: config.UPSTASH_REDIS_REST_URL,
+  token: config.UPSTASH_REDIS_REST_TOKEN
+});

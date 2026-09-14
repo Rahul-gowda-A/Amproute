@@ -43,7 +43,10 @@ export async function reserveCharger(chargerId: string, userId: string): Promise
     if (charger.rowCount === 0) throw new Error('CHARGER_NOT_FOUND');
     if (charger.rows[0].status !== 'available') throw new Error('CHARGER_UNAVAILABLE');
 
-    await client.query("UPDATE chargers SET status = 'reserved' WHERE id = $1", [chargerId]);
+    await client.query(
+      "UPDATE chargers SET status = 'reserved', reserved_by = $2 WHERE id = $1",
+      [chargerId, userId]
+    );
     await client.query('COMMIT');
     return { chargerId, userId, status: 'reserved' };
   } catch (error) {
@@ -56,15 +59,33 @@ export async function reserveCharger(chargerId: string, userId: string): Promise
 }
 
 export async function releaseCharger(chargerId: string, userId: string): Promise<ReservationResponse> {
-  if (!(await releaseChargerLock(chargerId, userId))) {
-    throw new Error('LOCK_NOT_OWNED');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const charger = await client.query<{ status: ReservationResponse['status']; reserved_by: string | null }>(
+      'SELECT status, reserved_by FROM chargers WHERE id = $1 FOR UPDATE',
+      [chargerId]
+    );
+    if (charger.rowCount === 0) throw new Error('CHARGER_NOT_FOUND');
+    if (charger.rows[0].status !== 'reserved') throw new Error('CHARGER_NOT_RESERVED');
+    if (charger.rows[0].reserved_by !== null && charger.rows[0].reserved_by !== userId) {
+      throw new Error('LOCK_NOT_OWNED');
+    }
+
+    const result = await client.query<{ status: ReservationResponse['status'] }>(
+      "UPDATE chargers SET status = 'available', reserved_by = NULL WHERE id = $1 RETURNING status",
+      [chargerId]
+    );
+    await client.query('COMMIT');
+    await releaseChargerLock(chargerId, userId);
+    if (result.rowCount === 0) throw new Error('CHARGER_NOT_RESERVED');
+    return { chargerId, userId, status: result.rows[0].status };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-  const result = await pool.query<{ status: ReservationResponse['status'] }>(
-    "UPDATE chargers SET status = 'available' WHERE id = $1 AND status = 'reserved' RETURNING status",
-    [chargerId]
-  );
-  if (result.rowCount === 0) throw new Error('CHARGER_NOT_RESERVED');
-  return { chargerId, userId, status: result.rows[0].status };
 }
 
 export async function createReservation(

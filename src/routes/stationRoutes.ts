@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { nearbyStationsController } from '../controllers/stationController.js';
+import {
+	handleGetNearbyChargers,
+	nearbyStationsController,
+} from '../controllers/stationController.js';
 
 export const stationRoutes = Router();
 stationRoutes.get('/stations/nearby', nearbyStationsController);
+stationRoutes.get('/chargers/nearby', handleGetNearbyChargers);

@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS chargers (
   plug_type TEXT NOT NULL CHECK (plug_type IN ('CCS2', 'Type 2', 'CHAdeMO')),
   max_power_kw NUMERIC(6, 2) NOT NULL CHECK (max_power_kw > 0),
   status TEXT NOT NULL DEFAULT 'available'
-    CHECK (status IN ('available', 'occupied', 'offline', 'maintenance')),
+    CHECK (status IN ('available', 'reserved', 'occupied', 'offline', 'maintenance')),
+  reserved_by UUID,
   price_per_kwh NUMERIC(8, 4) NOT NULL CHECK (price_per_kwh >= 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -39,3 +40,9 @@ CREATE TABLE IF NOT EXISTS reservations (
 
 CREATE INDEX IF NOT EXISTS idx_reservations_charger_time
   ON reservations (charger_id, start_time, end_time);
+
+ALTER TABLE chargers DROP CONSTRAINT IF EXISTS chargers_status_check;
+ALTER TABLE chargers ADD CONSTRAINT chargers_status_check
+  CHECK (status IN ('available', 'reserved', 'occupied', 'offline', 'maintenance'));
+
+ALTER TABLE chargers ADD COLUMN IF NOT EXISTS reserved_by UUID;

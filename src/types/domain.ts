@@ -53,3 +53,31 @@ export interface ChargerLockRequest {
   chargerId: string;
   userId: string;
 }
+
+export interface RouteCharger {
+  id: string;
+  stationId: string;
+  stationName: string;
+  address: string;
+  plugType: string;
+  maxPowerKw: number;
+  status: ChargerStatus;
+  pricePerKwh: number;
+  location: Coordinates;
+  detourDistanceMeters: number;
+  distanceFromOriginMeters: number;
+}
+
+export interface PlanRouteResult {
+  route: {
+    origin: Coordinates;
+    destination: Coordinates;
+    distanceMeters: number;
+    distanceKm: number;
+    trajectory: [number, number][];
+  };
+  maxDetourMeters: number;
+  totalChargers: number;
+  chargers: RouteCharger[];
+}
+

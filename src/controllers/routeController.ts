@@ -1,48 +1,33 @@
 import type { Request, Response } from 'express';
-import { calculateEVRoute } from '../services/routeService.js';
-import type { RoutePlanRequest } from '../types/domain.js';
+import { planRouteWithChargers } from '../services/routeService.js';
+import { planRouteSchema } from '../validators/schemas.js';
 
-function isCoordinates(value: unknown): value is RoutePlanRequest['origin'] {
-  if (!value || typeof value !== 'object') return false;
-  const coordinates = value as Record<string, unknown>;
-  return typeof coordinates.latitude === 'number'
-    && Number.isFinite(coordinates.latitude)
-    && coordinates.latitude >= -90
-    && coordinates.latitude <= 90
-    && typeof coordinates.longitude === 'number'
-    && Number.isFinite(coordinates.longitude)
-    && coordinates.longitude >= -180
-    && coordinates.longitude <= 180;
-}
+export async function handlePlanRoute(request: Request, response: Response) {
+  const parseResult = planRouteSchema.safeParse(request.body);
 
-function isValidPlan(value: unknown): value is RoutePlanRequest {
-  if (!value || typeof value !== 'object') return false;
-  const plan = value as Record<string, unknown>;
-  return isCoordinates(plan.origin)
-    && isCoordinates(plan.destination)
-    && typeof plan.currentBatteryPct === 'number'
-    && Number.isFinite(plan.currentBatteryPct)
-    && plan.currentBatteryPct >= 0
-    && plan.currentBatteryPct <= 100
-    && typeof plan.batteryCapacityKwh === 'number'
-    && Number.isFinite(plan.batteryCapacityKwh)
-    && plan.batteryCapacityKwh > 0
-    && typeof plan.maxRangeKm === 'number'
-    && Number.isFinite(plan.maxRangeKm)
-    && plan.maxRangeKm > 0;
-}
-
-export async function planRouteController(request: Request, response: Response) {
-  if (!isValidPlan(request.body)) {
+  if (!parseResult.success) {
+    const errorMessages = parseResult.error.errors.map((e) => e.message).join('; ');
     return response.status(400).json({
-      error: 'origin, destination, currentBatteryPct, batteryCapacityKwh, and maxRangeKm are invalid or missing'
+      error: errorMessages || 'Invalid route parameters',
+      issues: parseResult.error.issues,
     });
   }
 
+  const { originLat, originLng, destLat, destLng, maxDetourMeters } = parseResult.data;
+
   try {
-    return response.json(await calculateEVRoute(request.body));
+    const routePlan = await planRouteWithChargers(
+      originLat,
+      originLng,
+      destLat,
+      destLng,
+      maxDetourMeters
+    );
+    return response.json(routePlan);
   } catch (error) {
     console.error('Route planning failed:', error);
     return response.status(500).json({ error: 'Unable to calculate route' });
   }
 }
+
+export const planRouteController = handlePlanRoute;

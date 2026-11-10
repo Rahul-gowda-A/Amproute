@@ -20,10 +20,13 @@ CREATE TABLE IF NOT EXISTS chargers (
   status TEXT NOT NULL DEFAULT 'available'
     CHECK (status IN ('available', 'reserved', 'occupied', 'offline', 'maintenance')),
   reserved_by UUID,
+  location GEOGRAPHY(Point, 4326),
   price_per_kwh NUMERIC(8, 4) NOT NULL CHECK (price_per_kwh >= 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE chargers ADD COLUMN IF NOT EXISTS location GEOGRAPHY(Point, 4326);
+CREATE INDEX IF NOT EXISTS chargers_location_idx ON chargers USING GIST (location);
 CREATE INDEX IF NOT EXISTS idx_chargers_station_id ON chargers (station_id);
 
 CREATE TABLE IF NOT EXISTS reservations (
@@ -46,3 +49,8 @@ ALTER TABLE chargers ADD CONSTRAINT chargers_status_check
   CHECK (status IN ('available', 'reserved', 'occupied', 'offline', 'maintenance'));
 
 ALTER TABLE chargers ADD COLUMN IF NOT EXISTS reserved_by UUID;
+
+UPDATE chargers c
+SET location = s.location
+FROM stations s
+WHERE c.station_id = s.id AND c.location IS NULL;

@@ -1,5 +1,5 @@
 import cors from 'cors';
-import express from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
 import { reservationRoutes } from './routes/reservationRoutes.js';
@@ -25,3 +25,13 @@ app.use('/api', stationRoutes);
 app.use('/api', routeRoutes);
 app.use('/api', reservationRoutes);
 
+// 404 Not Found Handler for unmatched routes
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({ error: 'Endpoint not found' });
+});
+
+// Centralized error handling middleware
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('Unhandled server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});

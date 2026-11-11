@@ -87,8 +87,32 @@ AmpRoute is a production-grade backend service for electric vehicle (EV) route p
    ```
 
 3. **Access services**:
-   - API: [http://localhost:3000](http://localhost:3000)
+   - Backend API: [http://localhost:3000](http://localhost:3000)
    - Interactive Swagger Docs: [http://localhost:3000/api-docs](http://localhost:3000/api-docs)
+
+---
+
+## Running Full-Stack Locally (Backend + React Frontend)
+
+1. **Install dependencies**:
+   ```bash
+   npm install
+   npm --prefix frontend install
+   ```
+
+2. **Run both Backend and Frontend concurrently**:
+   ```bash
+   npm run dev
+   ```
+   - Frontend UI: [http://localhost:5173](http://localhost:5173)
+   - Backend API: [http://localhost:3000](http://localhost:3000)
+
+3. **Other helpful scripts**:
+   - `npm run dev:backend`: Run Express backend with `tsx watch`
+   - `npm run dev:frontend`: Run Vite React frontend dev server
+   - `npm run build:all`: Compile TypeScript for both backend and frontend
+   - `npm run typecheck:all`: Run strict type checking across both projects
+   - `npm test`: Run automated Jest & Supertest integration tests
 
 ---
 
